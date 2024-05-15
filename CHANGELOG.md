@@ -51,3 +51,6 @@
 * Allow to set alignment for default footer
 * Show horizontal scrollbar for table content
 * Allow to set thumbVisibility for horizontal scrollbar
+
+## [0.0.9] - 15/05/2024
+* Fix theme, remove deprecated values
