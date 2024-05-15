@@ -576,9 +576,9 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         // list and then tweak them appropriately.
                         // See https://material.io/design/components/data-tables.html#tables-within-cards
                         style: _selectedRowCount > 0
-                            ? themeData.textTheme.subtitle1!.copyWith(
-                                color: themeData.colorScheme.secondary)
-                            : themeData.textTheme.headline6!
+                            ? themeData.textTheme.titleMedium!.copyWith(
+                                color: themeData.colorScheme.secondary,)
+                            : themeData.textTheme.titleLarge!
                                 .copyWith(fontWeight: FontWeight.w400),
                         child: IconTheme.merge(
                           data: const IconThemeData(
@@ -619,7 +619,8 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         // Make sure no decoration is set on the DataTable
                         // from the theme, as its already wrapped in a Card.
                         decoration: const BoxDecoration(),
-                        dataRowHeight: widget.dataRowHeight,
+                        dataRowMinHeight: widget.dataRowHeight,
+                        dataRowMaxHeight: widget.dataRowHeight,
                         headingRowHeight: widget.headingRowHeight,
                         horizontalMargin: widget.horizontalMargin,
                         columnSpacing: widget.columnSpacing,
