@@ -8,6 +8,7 @@ import 'package:advanced_datatable/advanced_datatable_source.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 
+typedef GetErrorWidgetCallBack = Widget Function(dynamic error);
 typedef GetWidgetCallBack = Widget Function();
 typedef GetFooterCallBack = Widget Function(
   AdvancedDataTableSource currentSource,
@@ -129,7 +130,7 @@ class AdvancedPaginatedDataTable extends StatefulWidget {
 
   /// Called once the page loading encountered an error in the future
   /// If not provided a default message will be shown
-  final GetWidgetCallBack? errorWidget;
+  final GetErrorWidgetCallBack? errorWidget;
 
   /// The table card's optional header.
   ///
@@ -281,6 +282,7 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
   late int _rowCount;
   late bool _rowCountApproximate;
   int _selectedRowCount = 0;
+
   //Used to load the next page if needed
   late Future<int> loadNextPage;
   final Map<int, DataRow?> _rows = <int, DataRow?>{};
@@ -480,30 +482,26 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
         return FutureBuilder<int>(
           future: loadNextPage,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.hasError) {
+              if (widget.errorWidget != null) {
+                return widget.errorWidget!(snapshot.error);
+              } else {
+                return Center(child: Text('${snapshot.error}'));
+              }
+            } else if (snapshot.connectionState == ConnectionState.waiting) {
+              if (widget.loadingWidget != null) {
+                return widget.loadingWidget!();
+              } else {
+                return buildTableWhenReady(
+                  constraints,
+                  loading: true,
+                );
+              }
+            } else if (snapshot.connectionState == ConnectionState.done) {
               _rowCount = snapshot.data ?? 0;
               return buildTableWhenReady(constraints);
             } else {
-              if (snapshot.hasError) {
-                if (widget.errorWidget != null) {
-                  return widget.errorWidget!();
-                } else {
-                  return Center(
-                    child: Text(
-                      'Something went wrong: ${snapshot.error?.toString() ?? 'No error information'}',
-                    ),
-                  );
-                }
-              } else {
-                if (widget.loadingWidget != null) {
-                  return widget.loadingWidget!();
-                } else {
-                  return buildTableWhenReady(
-                    constraints,
-                    loading: true,
-                  );
-                }
-              }
+              return const SizedBox.shrink();
             }
           },
         );
@@ -524,7 +522,7 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
     var startPadding = 24.0;
     if (_selectedRowCount == 0 && widget.header != null) {
       headerWidgets.add(Expanded(child: widget.header!));
-      if (widget.header is ButtonBar) {
+      if (widget.header is OverflowBar) {
         // We adjust the padding when a button bar is present, because the
         // ButtonBar introduces 2 pixels of outside padding, plus 2 pixels
         // around each button on each side, and the button itself will have 8
@@ -575,11 +573,12 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         // list and then tweak them appropriately.
                         // See https://material.io/design/components/data-tables.html#tables-within-cards
                         style: _selectedRowCount > 0
-                            ? themeData.textTheme.titleMedium!.copyWith(
+                            ? themeData.textTheme.bodyMedium!.copyWith(
                                 color: themeData.colorScheme.secondary,
                               )
-                            : themeData.textTheme.titleLarge!
-                                .copyWith(fontWeight: FontWeight.w400),
+                            : themeData.textTheme.headlineSmall!.copyWith(
+                                fontWeight: FontWeight.w400,
+                              ),
                         child: IconTheme.merge(
                           data: const IconThemeData(
                             opacity: 0.54,
@@ -668,9 +667,8 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
           );
         }).toList();
         footerWidgets.addAll(<Widget>[
-          Container(
-            width: 14.0,
-          ), // to match trailing padding in case we overflow and end up scrolling
+          Container(width: 14.0),
+          // to match trailing padding in case we overflow and end up scrolling
           Text(localizations.rowsPerPageTitle),
           ConstrainedBox(
             constraints: const BoxConstraints(
@@ -760,6 +758,7 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
               dragStartBehavior: widget.dragStartBehavior,
               scrollDirection: Axis.horizontal,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: footerWidgets,
               ),
             ),
