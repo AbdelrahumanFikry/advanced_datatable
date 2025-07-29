@@ -472,6 +472,8 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
       !_rowCountApproximate &&
       (_firstRowIndex + widget.rowsPerPage >= _rowCount);
 
+  final GlobalKey _tableKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     //Adjusted to first request the data followed by rendering the original table
@@ -609,7 +611,7 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         minWidth: constraints.maxWidth,
                       ),
                       child: DataTable(
-                        key: ValueKey<int>(widget.source.hashCode),
+                        key: _tableKey,
                         columns: widget.columns,
                         sortColumnIndex: widget.sortColumnIndex,
                         sortAscending: widget.sortAscending,
