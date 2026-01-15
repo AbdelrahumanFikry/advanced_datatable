@@ -96,6 +96,7 @@ class AdvancedPaginatedDataTable extends StatefulWidget {
     this.checkboxHorizontalMargin,
     this.addEmptyRows = true,
     this.loadingWidget,
+    this.emptyWidget,
     this.errorWidget,
     this.getFooterRowText,
     this.customTableFooter,
@@ -121,6 +122,9 @@ class AdvancedPaginatedDataTable extends StatefulWidget {
   /// If the source doesnt have enough data add empty/blank lines to fill a page
   /// Default true
   final bool addEmptyRows;
+
+  /// Called when no rows are available to show
+  final GetWidgetCallBack? emptyWidget;
 
   final GetFooterRowText? getFooterRowText;
 
@@ -492,9 +496,11 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
               if (widget.loadingWidget != null) {
                 return widget.loadingWidget!();
               } else {
-                return buildTableWhenReady(
-                  constraints,
-                  loading: true,
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(),
+                  ),
                 );
               }
             } else if (snapshot.connectionState == ConnectionState.done) {
@@ -510,10 +516,7 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
   }
 
   ///Original build method from the Flutter PageinatedDataTable
-  Widget buildTableWhenReady(
-    BoxConstraints constraints, {
-    bool loading = false,
-  }) {
+  Widget buildTableWhenReady(BoxConstraints constraints) {
     assert(debugCheckHasMaterialLocalizations(context));
     final themeData = Theme.of(context);
     final localizations = MaterialLocalizations.of(context);
@@ -549,68 +552,65 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
       );
     }
 
-    return Stack(
-      children: [
-        if (loading)
-          const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else
-          Scrollbar(
-            controller: scroller,
-            thumbVisibility: widget.showHorizontalScrollbarAlways,
-            child: Card(
-              semanticContainer: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (headerWidgets.isNotEmpty)
-                    Semantics(
-                      container: true,
-                      child: DefaultTextStyle(
-                        // These typographic styles aren't quite the regular ones. We pick the closest ones from the regular
-                        // list and then tweak them appropriately.
-                        // See https://material.io/design/components/data-tables.html#tables-within-cards
-                        style: _selectedRowCount > 0
-                            ? themeData.textTheme.bodyMedium!.copyWith(
-                                color: themeData.colorScheme.secondary,
-                              )
-                            : themeData.textTheme.headlineSmall!.copyWith(
-                                fontWeight: FontWeight.w400,
-                              ),
-                        child: IconTheme.merge(
-                          data: const IconThemeData(
-                            opacity: 0.54,
-                          ),
-                          child: Ink(
-                            height: 64.0,
-                            color: _selectedRowCount > 0
-                                ? themeData.secondaryHeaderColor
-                                : null,
-                            child: Padding(
-                              padding: EdgeInsetsDirectional.only(
-                                start: startPadding,
-                                end: 14.0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: headerWidgets,
-                              ),
-                            ),
-                          ),
+    final rows = _getRows(_firstRowIndex, widget.rowsPerPage);
+
+    return Scrollbar(
+      controller: scroller,
+      thumbVisibility: widget.showHorizontalScrollbarAlways,
+      child: Card(
+        semanticContainer: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (headerWidgets.isNotEmpty)
+              Semantics(
+                container: true,
+                child: DefaultTextStyle(
+                  // These typographic styles aren't quite the regular ones. We pick the closest ones from the regular
+                  // list and then tweak them appropriately.
+                  // See https://material.io/design/components/data-tables.html#tables-within-cards
+                  style: _selectedRowCount > 0
+                      ? themeData.textTheme.bodyMedium!.copyWith(
+                          color: themeData.colorScheme.secondary,
+                        )
+                      : themeData.textTheme.headlineSmall!.copyWith(
+                          fontWeight: FontWeight.w400,
+                        ),
+                  child: IconTheme.merge(
+                    data: const IconThemeData(
+                      opacity: 0.54,
+                    ),
+                    child: Ink(
+                      height: 64.0,
+                      color: _selectedRowCount > 0
+                          ? themeData.secondaryHeaderColor
+                          : null,
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.only(
+                          start: startPadding,
+                          end: 14.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: headerWidgets,
                         ),
                       ),
                     ),
-                  SingleChildScrollView(
-                    controller: scroller,
-                    scrollDirection: Axis.horizontal,
-                    dragStartBehavior: widget.dragStartBehavior,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: constraints.maxWidth,
-                      ),
-                      child: DataTable(
+                  ),
+                ),
+              ),
+            SingleChildScrollView(
+              controller: scroller,
+              scrollDirection: Axis.horizontal,
+              dragStartBehavior: widget.dragStartBehavior,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: rows.isEmpty
+                    ? Center(
+                        child: widget.emptyWidget?.call() ??
+                            const SizedBox.shrink(),
+                      )
+                    : DataTable(
                         key: _tableKey,
                         columns: widget.columns,
                         sortColumnIndex: widget.sortColumnIndex,
@@ -626,20 +626,17 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         columnSpacing: widget.columnSpacing,
                         showCheckboxColumn: widget.showCheckboxColumn,
                         showBottomBorder: true,
-                        rows: _getRows(_firstRowIndex, widget.rowsPerPage),
+                        rows: rows,
                       ),
-                    ),
-                  ),
-                  if (!loading)
-                    Align(
-                      alignment: widget.defaultFootAlignment,
-                      child: createTableFooter(),
-                    ),
-                ],
               ),
             ),
-          ),
-      ],
+            Align(
+              alignment: widget.defaultFootAlignment,
+              child: createTableFooter(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -706,9 +703,13 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
           buildDataAmountText(),
         ),
         Container(width: 32.0),
-        if (widget.showFirstLastButtons )
+        if (widget.showFirstLastButtons)
           IconButton(
-            icon:  Icon(currentLocale == TextDirection.ltr?Icons.skip_previous:Icons.skip_next),
+            icon: Icon(
+              currentLocale == TextDirection.ltr
+                  ? Icons.skip_previous
+                  : Icons.skip_next,
+            ),
             padding: EdgeInsets.zero,
             onPressed: _firstRowIndex <= 0 ? null : _handleFirst,
           ),
@@ -725,9 +726,13 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
           tooltip: localizations.nextPageTooltip,
           onPressed: _isNextPageUnavailable() ? null : _handleNext,
         ),
-        if (widget.showFirstLastButtons )
+        if (widget.showFirstLastButtons)
           IconButton(
-            icon:  Icon(currentLocale == TextDirection.ltr?Icons.skip_next:Icons.skip_previous),
+            icon: Icon(
+              currentLocale == TextDirection.ltr
+                  ? Icons.skip_next
+                  : Icons.skip_previous,
+            ),
             padding: EdgeInsets.zero,
             onPressed: _isNextPageUnavailable() ? null : _handleLast,
           ),
