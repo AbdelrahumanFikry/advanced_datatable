@@ -75,7 +75,8 @@ class AdvancedPaginatedDataTable extends StatefulWidget {
     this.sortColumnIndex,
     this.sortAscending = true,
     this.onSelectAll,
-    this.dataRowHeight = kMinInteractiveDimension,
+    this.dataRowMaxHeight = kMinInteractiveDimension,
+    this.dataRowMinHeight = kMinInteractiveDimension,
     this.headingRowHeight = 56.0,
     this.horizontalMargin = 24.0,
     this.columnSpacing = 56.0,
@@ -176,11 +177,16 @@ class AdvancedPaginatedDataTable extends StatefulWidget {
   /// See [DataTable.onSelectAll].
   final ValueSetter<bool?>? onSelectAll;
 
-  /// The height of each row (excluding the row that contains column headings).
+  /// The Max height of each row (excluding the row that contains column headings).
   ///
   /// This value is optional and defaults to kMinInteractiveDimension if not
   /// specified.
-  final double dataRowHeight;
+  final double dataRowMaxHeight;
+  /// The Min height of each row (excluding the row that contains column headings).
+  ///
+  /// This value is optional and defaults to kMinInteractiveDimension if not
+  /// specified.
+  final double dataRowMinHeight;
 
   /// The height of the heading row.
   ///
@@ -619,8 +625,8 @@ class PaginatedDataTableState extends State<AdvancedPaginatedDataTable> {
                         // Make sure no decoration is set on the DataTable
                         // from the theme, as its already wrapped in a Card.
                         decoration: const BoxDecoration(),
-                        dataRowMinHeight: widget.dataRowHeight,
-                        dataRowMaxHeight: widget.dataRowHeight,
+                        dataRowMinHeight: widget.dataRowMinHeight,
+                        dataRowMaxHeight: widget.dataRowMaxHeight,
                         headingRowHeight: widget.headingRowHeight,
                         horizontalMargin: widget.horizontalMargin,
                         columnSpacing: widget.columnSpacing,
